@@ -1,24 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Terminal, Trash2, Download } from 'lucide-react';
-
-const EVENT_STYLES = {
-  packet_sent:        { color: 'text-blue-400', prefix: '→ SEND' },
-  packet_received:    { color: 'text-emerald-400', prefix: '← RECV' },
-  packet_lost:        { color: 'text-rose-400', prefix: '✗ LOST' },
-  packet_corrupted:   { color: 'text-orange-400', prefix: '⚠ CORR' },
-  packet_duplicated:  { color: 'text-purple-400', prefix: '⊕ DUPE' },
-  packet_reordered:   { color: 'text-cyan-400', prefix: '⇌ RORD' },
-  ack_sent:           { color: 'text-emerald-300', prefix: '→ ACK·' },
-  ack_received:       { color: 'text-emerald-400', prefix: '← ACK·' },
-  timeout:            { color: 'text-amber-400', prefix: '⏰ TOUT' },
-  retransmission:     { color: 'text-yellow-400', prefix: '↺ RETX' },
-  window_update:      { color: 'text-sky-400', prefix: '⊞ WIND' },
-  duplicate_detected: { color: 'text-purple-300', prefix: '⊕ DUPL' },
-  transfer_started:   { color: 'text-green-300', prefix: '▶ STRT' },
-  transfer_progress:  { color: 'text-slate-400', prefix: '· PROG' },
-  transfer_complete:  { color: 'text-emerald-300', prefix: '✓ DONE' },
-  transfer_failed:    { color: 'text-rose-400', prefix: '✗ FAIL' },
-};
+import { Download, Trash2 } from 'lucide-react';
 
 export default function EventLog({ events, onClear }) {
   const bottomRef = useRef(null);
@@ -44,69 +25,127 @@ export default function EventLog({ events, onClear }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'event_log.csv';
+    a.download = 'udp_event_timeline.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  // Display chronologically (latest at bottom)
-  const displayEvents = [...events].reverse().slice(0, 200);
+  const displayEvents = [...events].reverse().slice(0, 300);
 
   return (
-    <div className="glass-panel rounded-2xl p-5 shadow-xl border border-slate-800/80 flex flex-col gap-3">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800/60">
-        <div className="flex items-center gap-2.5">
-          <Terminal className="w-5 h-5 text-slate-400" />
-          <h2 className="text-base font-bold text-white tracking-wide">Event Log</h2>
-          <span className="text-xs font-mono text-slate-500">{events.length} total events</span>
+    <div className="bg-[#FFFFFF] border border-[#DCD9D1] rounded-2xl p-8 shadow-sm">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-[#ECE9E2] gap-4 mb-6">
+        <div>
+          <span className="text-[11px] font-mono uppercase tracking-widest text-[#969389] block mb-1">
+            Chronological Audit
+          </span>
+          <h2 className="font-editorial text-2xl font-extrabold tracking-tight text-[#141413]">
+            EVENT TIMELINE
+          </h2>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex items-center gap-2">
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+            className="btn-secondary text-xs py-2 px-4 flex items-center gap-1.5"
           >
             <Download className="w-3.5 h-3.5" />
-            Export CSV
+            <span>Export CSV</span>
           </button>
           <button
             onClick={onClear}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+            className="btn-secondary text-xs py-2 px-4 hover:border-red-400 hover:text-red-600"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            Clear
+            <span>Clear</span>
           </button>
         </div>
       </div>
 
-      <div className="h-64 overflow-y-auto bg-[#06090f] rounded-xl border border-slate-800/60 font-mono text-[11px] p-3 space-y-0.5">
+      {/* Timeline Stream */}
+      <div className="max-h-96 overflow-y-auto pr-2 space-y-3 font-mono text-xs">
         {displayEvents.length === 0 ? (
-          <div className="text-slate-600 text-center py-12">Start a transfer to see events...</div>
+          <div className="text-center py-16 bg-[#F5F3EE] rounded-xl text-[#969389]">
+            Timeline empty. Transmit packets to generate events.
+          </div>
         ) : (
           displayEvents.map((ev, idx) => {
-            const style = EVENT_STYLES[ev.event_type] || { color: 'text-slate-400', prefix: '· INFO' };
             const timeStr = new Date(ev.timestamp * 1000).toLocaleTimeString([], {
               hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3
             });
+
+            let dotColor = 'bg-[#141413]';
+            let label = 'INFO';
+            let isHighlight = false;
+
+            if (ev.event_type === 'packet_lost') {
+              dotColor = 'bg-red-500';
+              label = 'LOSS';
+              isHighlight = true;
+            } else if (ev.event_type === 'packet_corrupted') {
+              dotColor = 'bg-amber-500';
+              label = 'CRC';
+              isHighlight = true;
+            } else if (ev.event_type === 'ack_received') {
+              dotColor = 'bg-[#ECE9E2] border border-[#141413]';
+              label = 'ACK';
+            } else if (ev.event_type === 'retransmission' || ev.event_type === 'timeout') {
+              dotColor = 'bg-[#141413] ring-2 ring-amber-400';
+              label = 'RTO';
+              isHighlight = true;
+            } else if (ev.event_type === 'packet_sent') {
+              dotColor = 'bg-[#141413]';
+              label = 'SEND';
+            }
+
             return (
-              <div key={idx} className="flex items-start gap-2 hover:bg-slate-800/20 px-1 py-0.5 rounded">
-                <span className="text-slate-600 min-w-[72px]">{timeStr}</span>
-                <span className={`min-w-[48px] font-bold ${style.color}`}>{style.prefix}</span>
-                {(ev.seq !== null && ev.seq !== undefined) && (
-                  <span className="text-slate-500">#{ev.seq}</span>
-                )}
-                {(ev.ack !== null && ev.ack !== undefined && ev.ack !== ev.seq) && (
-                  <span className="text-slate-500">ACK={ev.ack}</span>
-                )}
-                {ev.rtt !== null && ev.rtt !== undefined && (
-                  <span className="text-cyan-600">[RTT={( ev.rtt * 1000).toFixed(1)}ms]</span>
-                )}
-                <span className={`${style.color} opacity-80`}>{ev.message}</span>
+              <div 
+                key={idx}
+                className={`p-3 rounded-xl border flex items-start justify-between gap-4 transition-colors ${
+                  isHighlight 
+                    ? 'bg-[#F5F3EE] border-[#BEB9AC]' 
+                    : 'bg-[#FFFFFF] border-[#ECE9E2] hover:border-[#DCD9D1]'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 flex items-center justify-center">
+                    <span className={`w-2.5 h-2.5 rounded-full ${dotColor}`}></span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#141413] uppercase tracking-wider text-[11px]">
+                        {ev.message || ev.event_type.replace(/_/g, ' ')}
+                      </span>
+                      {ev.seq !== null && ev.seq !== undefined && (
+                        <span className="text-[10px] bg-[#ECE9E2] text-[#141413] px-1.5 py-0.2 rounded font-bold">
+                          PKT #{ev.seq}
+                        </span>
+                      )}
+                      {ev.ack !== null && ev.ack !== undefined && ev.ack !== ev.seq && (
+                        <span className="text-[10px] bg-[#ECE9E2] text-[#141413] px-1.5 py-0.2 rounded font-bold">
+                          ACK #{ev.ack}
+                        </span>
+                      )}
+                    </div>
+                    {ev.rtt !== null && ev.rtt !== undefined && (
+                      <span className="text-[10px] text-[#969389] block mt-0.5">
+                        RTT: {(ev.rtt * 1000).toFixed(1)} ms
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <span className="text-[#969389] text-[10px] whitespace-nowrap">
+                  {timeStr}
+                </span>
               </div>
             );
           })
         )}
         <div ref={bottomRef} />
       </div>
+
     </div>
   );
 }

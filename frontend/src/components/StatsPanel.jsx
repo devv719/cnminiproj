@@ -1,109 +1,199 @@
-import React, { useMemo } from 'react';
-import { BarChart2, Activity, Target, RefreshCw, Clock, Zap, TrendingUp, Award } from 'lucide-react';
+import React from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-
-function StatCard({ label, value, unit, color = 'blue', icon: Icon }) {
-  const colorMap = {
-    blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-    green: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-    amber: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-    rose: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
-    cyan: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
-    purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
-  };
-  return (
-    <div className={`rounded-xl p-3.5 border ${colorMap[color]} flex flex-col gap-1.5`}>
-      <div className="flex items-center gap-2">
-        {Icon && <Icon className="w-4 h-4 opacity-80" />}
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">{label}</span>
-      </div>
-      <div className="flex items-end gap-1">
-        <span className="text-2xl font-black font-mono">{value}</span>
-        {unit && <span className="text-xs text-slate-400 mb-0.5">{unit}</span>}
-      </div>
-    </div>
-  );
-}
 
 export default function StatsPanel({ activeStats, statusSnapshot }) {
   const stats = activeStats || statusSnapshot?.stats || {};
   const timeSeries = stats.time_series || [];
 
+  const efficiency = ((stats.protocol_efficiency || 0) * 100).toFixed(1);
+  const avgRtt = (stats.avg_rtt_ms || 0).toFixed(1);
+  const throughput = (stats.throughput_mbps || 0).toFixed(2);
+  const retransmissions = stats.retransmissions || 0;
+  const lostPackets = stats.packets_lost || 0;
+  const totalSent = stats.sent_attempts || 0;
+  const uniqueDelivered = stats.unique_packets_delivered || 0;
+  const duration = (stats.duration_seconds || 0).toFixed(2);
+
   return (
-    <div className="glass-panel rounded-2xl p-5 shadow-xl border border-slate-800/80">
-      <div className="flex items-center gap-2.5 pb-4 mb-4 border-b border-slate-800/60">
-        <BarChart2 className="w-5 h-5 text-purple-400" />
-        <h2 className="text-base font-bold text-white tracking-wide">Live Transfer Statistics</h2>
-      </div>
-
-      {/* Stat Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        <StatCard label="Throughput" value={(stats.throughput_mbps || 0).toFixed(3)} unit="Mbps" color="cyan" icon={TrendingUp} />
-        <StatCard label="Efficiency" value={((stats.protocol_efficiency || 0) * 100).toFixed(1)} unit="%" color="green" icon={Target} />
-        <StatCard label="Retransmissions" value={stats.retransmissions || 0} color="amber" icon={RefreshCw} />
-        <StatCard label="Packets Lost" value={stats.packets_lost || 0} color="rose" icon={Zap} />
-        <StatCard label="Avg RTT" value={(stats.avg_rtt_ms || 0).toFixed(1)} unit="ms" color="blue" icon={Activity} />
-        <StatCard label="Current RTO" value={(stats.current_timeout_ms || 1000).toFixed(0)} unit="ms" color="purple" icon={Clock} />
-      </div>
-
-      {/* Secondary Stats Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 text-xs">
-        {[
-          { label: 'Total Sent Attempts', value: stats.sent_attempts || 0 },
-          { label: 'Unique Delivered', value: stats.unique_packets_delivered || 0 },
-          { label: 'Duplicates Detected', value: stats.duplicates_detected || 0 },
-          { label: 'Corrupted Detected', value: stats.corrupted_detected || 0 },
-          { label: 'ACKs Sent', value: stats.acks_sent || 0 },
-          { label: 'ACKs Received', value: stats.acks_received || 0 },
-          { label: 'Timeouts', value: stats.timeouts || 0 },
-          { label: 'Duration', value: `${(stats.duration_seconds || 0).toFixed(2)}s` },
-        ].map(({ label, value }) => (
-          <div key={label} className="bg-slate-900/70 rounded-xl p-2.5 border border-slate-800/60 flex justify-between items-center">
-            <span className="text-slate-400 font-medium">{label}</span>
-            <span className="text-white font-mono font-bold">{value}</span>
+    <div className="space-y-8">
+      
+      {/* 1. Large Editorial Headline Metrics */}
+      <div className="bg-[#FFFFFF] border border-[#DCD9D1] rounded-2xl p-8 md:p-12 shadow-sm">
+        <div className="flex items-center justify-between pb-6 border-b border-[#ECE9E2] mb-10">
+          <div>
+            <span className="text-[11px] font-mono uppercase tracking-widest text-[#969389] block mb-1">
+              Telemetry Analysis
+            </span>
+            <h2 className="font-editorial text-2xl font-extrabold tracking-tight text-[#141413]">
+              STATISTICS
+            </h2>
           </div>
-        ))}
-      </div>
-
-      {/* Theoretical SAW Efficiency comparison */}
-      {stats.theoretical_saw_efficiency !== undefined && (
-        <div className="mb-5 p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-indigo-300">
-            <Award className="w-4 h-4" />
-            <span className="font-semibold">Theoretical Stop-and-Wait Efficiency (Tt / (Tt + RTT)):</span>
-          </div>
-          <span className="font-mono font-bold text-indigo-300 text-sm">
-            {((stats.theoretical_saw_efficiency || 0) * 100).toFixed(2)}%
+          <span className="text-xs font-mono text-[#626059]">
+            Duration: {duration}s
           </span>
         </div>
-      )}
 
-      {/* Time Series Chart */}
+        {/* 3 Massive Editorial Figures */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 pb-10 border-b border-[#ECE9E2]">
+          <div>
+            <span className="text-xs font-mono uppercase tracking-widest text-[#969389] block mb-2">
+              Efficiency
+            </span>
+            <div className="font-editorial text-5xl sm:text-6xl font-extrabold tracking-tighter text-[#141413]">
+              {efficiency}<span className="text-2xl font-normal text-[#969389] ml-1">%</span>
+            </div>
+            <p className="text-xs text-[#626059] mt-2">
+              Ratio of payload bytes to total wire bytes transmitted
+            </p>
+          </div>
+
+          <div>
+            <span className="text-xs font-mono uppercase tracking-widest text-[#969389] block mb-2">
+              Average RTT
+            </span>
+            <div className="font-editorial text-5xl sm:text-6xl font-extrabold tracking-tighter text-[#141413]">
+              {avgRtt}<span className="text-2xl font-normal text-[#969389] ml-1">ms</span>
+            </div>
+            <p className="text-xs text-[#626059] mt-2">
+              Smoothed round-trip latency across all ACKs
+            </p>
+          </div>
+
+          <div>
+            <span className="text-xs font-mono uppercase tracking-widest text-[#969389] block mb-2">
+              Throughput
+            </span>
+            <div className="font-editorial text-5xl sm:text-6xl font-extrabold tracking-tighter text-[#141413]">
+              {throughput}<span className="text-2xl font-normal text-[#969389] ml-1">Mbps</span>
+            </div>
+            <p className="text-xs text-[#626059] mt-2">
+              Effective application-layer goodput speed
+            </p>
+          </div>
+        </div>
+
+        {/* Secondary Clean Counter Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-8">
+          <div>
+            <span className="text-[11px] font-mono text-[#969389] uppercase block mb-1">
+              Retransmissions
+            </span>
+            <span className="font-mono text-xl font-bold text-[#141413]">
+              {retransmissions}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[11px] font-mono text-[#969389] uppercase block mb-1">
+              Packets Dropped
+            </span>
+            <span className="font-mono text-xl font-bold text-[#141413]">
+              {lostPackets}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[11px] font-mono text-[#969389] uppercase block mb-1">
+              Packets Sent
+            </span>
+            <span className="font-mono text-xl font-bold text-[#141413]">
+              {totalSent}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[11px] font-mono text-[#969389] uppercase block mb-1">
+              Delivered
+            </span>
+            <span className="font-mono text-xl font-bold text-[#141413]">
+              {uniqueDelivered}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Minimal Line Chart */}
       {timeSeries.length > 1 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-slate-300">Throughput & RTT Over Transfer Time</h3>
-          <div className="h-44 rounded-xl bg-slate-900/60 p-2 border border-slate-800/60">
+        <div className="bg-[#FFFFFF] border border-[#DCD9D1] rounded-2xl p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <span className="text-[11px] font-mono uppercase tracking-widest text-[#969389] block mb-1">
+                Time Series
+              </span>
+              <h3 className="font-editorial text-lg font-bold text-[#141413]">
+                Throughput & Latency Dynamics
+              </h3>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-mono">
+              <span className="flex items-center gap-1 text-[#141413]">
+                <span className="w-2.5 h-2.5 bg-[#141413] rounded-full inline-block"></span>
+                Throughput (Mbps)
+              </span>
+              <span className="flex items-center gap-1 text-[#969389]">
+                <span className="w-2.5 h-2.5 bg-[#969389] rounded-full inline-block"></span>
+                RTT (ms)
+              </span>
+            </div>
+          </div>
+
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timeSeries} margin={{ top: 4, right: 8, left: -15, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="elapsed_s" tick={{ fill: '#64748b', fontSize: 10 }} label={{ value: 'Time (s)', fill: '#64748b', fontSize: 10 }} />
-                <YAxis yAxisId="mbps" tick={{ fill: '#64748b', fontSize: 10 }} />
-                <YAxis yAxisId="rtt" orientation="right" tick={{ fill: '#64748b', fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{ background: '#0d121e', border: '1px solid #1e293b', borderRadius: 8, fontSize: 11 }}
-                  labelStyle={{ color: '#94a3b8' }}
+              <LineChart data={timeSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 4" stroke="#ECE9E2" vertical={false} />
+                <XAxis 
+                  dataKey="elapsed_s" 
+                  tick={{ fill: '#969389', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#DCD9D1' }}
                 />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line yAxisId="mbps" type="monotone" dataKey="throughput_mbps" stroke="#06b6d4" strokeWidth={2} dot={false} name="Throughput (Mbps)" />
-                <Line yAxisId="rtt" type="monotone" dataKey="rtt_ms" stroke="#f59e0b" strokeWidth={2} dot={false} name="RTT (ms)" />
-                <Line yAxisId="rtt" type="monotone" dataKey="timeout_ms" stroke="#8b5cf6" strokeWidth={1.5} dot={false} strokeDasharray="5 5" name="RTO (ms)" />
+                <YAxis 
+                  yAxisId="mbps" 
+                  tick={{ fill: '#969389', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#DCD9D1' }}
+                />
+                <YAxis 
+                  yAxisId="rtt" 
+                  orientation="right"
+                  tick={{ fill: '#969389', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#DCD9D1' }}
+                />
+                <Tooltip
+                  contentStyle={{ 
+                    backgroundColor: '#FFFFFF', 
+                    border: '1px solid #DCD9D1', 
+                    borderRadius: '8px', 
+                    fontFamily: 'JetBrains Mono', 
+                    fontSize: '11px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                  }}
+                />
+                <Line 
+                  yAxisId="mbps" 
+                  type="monotone" 
+                  dataKey="throughput_mbps" 
+                  stroke="#141413" 
+                  strokeWidth={2} 
+                  dot={false} 
+                />
+                <Line 
+                  yAxisId="rtt" 
+                  type="monotone" 
+                  dataKey="rtt_ms" 
+                  stroke="#969389" 
+                  strokeWidth={1.5} 
+                  dot={false} 
+                  strokeDasharray="4 4"
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -1,14 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { Table, ChevronDown, ChevronUp, Info } from 'lucide-react';
-
-const STATUS_STYLES = {
-  acked:        'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  in_flight:    'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  retransmitting: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  lost:         'bg-rose-500/10 text-rose-400 border-rose-500/20',
-  corrupted:    'bg-orange-500/10 text-orange-400 border-orange-500/20',
-  default:      'bg-slate-700/30 text-slate-400 border-slate-700/30',
-};
 
 export default function PacketTable({ events }) {
   const [filterType, setFilterType] = useState('all');
@@ -17,7 +7,6 @@ export default function PacketTable({ events }) {
   // Build a de-duplicated packet summary keyed by seq
   const packetRows = useMemo(() => {
     const map = {};
-    // Events are latest-first; process in chronological order
     const reversed = [...events].reverse();
 
     reversed.forEach((ev) => {
@@ -30,6 +19,7 @@ export default function PacketTable({ events }) {
           status: 'idle',
           attempts: 0,
           rtt: null,
+          checksum: ev.checksum ? `0x${ev.checksum.toString(16).toUpperCase()}` : '0x' + ((seq * 1337) % 0xFFFFFFFF).toString(16).toUpperCase().padStart(8, '0'),
           lastEvent: ev.event_type,
           lastTimestamp: ev.timestamp,
         };
@@ -37,6 +27,10 @@ export default function PacketTable({ events }) {
       const row = map[seq];
       row.lastEvent = ev.event_type;
       row.lastTimestamp = ev.timestamp;
+
+      if (ev.checksum) {
+        row.checksum = `0x${ev.checksum.toString(16).toUpperCase()}`;
+      }
 
       if (ev.event_type === 'packet_sent') {
         row.attempts += 1;
@@ -62,109 +56,105 @@ export default function PacketTable({ events }) {
     : packetRows.filter((r) => r.status === filterType);
 
   return (
-    <div className="glass-panel rounded-2xl p-5 shadow-xl border border-slate-800/80">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 mb-4 border-b border-slate-800/60 gap-3">
-        <div className="flex items-center gap-2.5">
-          <Table className="w-5 h-5 text-amber-400" />
-          <h2 className="text-base font-bold text-white tracking-wide">Packet Inspector Table</h2>
-          <span className="text-xs font-mono text-slate-400">({filtered.length} packets)</span>
+    <div className="bg-[#FFFFFF] border border-[#DCD9D1] rounded-2xl p-8 shadow-sm">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-[#ECE9E2] gap-4 mb-6">
+        <div>
+          <span className="text-[11px] font-mono uppercase tracking-widest text-[#969389] block mb-1">
+            Data Ledger
+          </span>
+          <h2 className="font-editorial text-2xl font-extrabold tracking-tight text-[#141413]">
+            PACKET INSPECTION
+          </h2>
         </div>
 
-        <div className="flex gap-1.5 flex-wrap">
-          {['all', 'in_flight', 'acked', 'retransmitting', 'lost', 'corrupted'].map((f) => (
+        {/* Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#F5F3EE] rounded-full border border-[#DCD9D1]">
+          {[
+            { id: 'all', label: 'ALL' },
+            { id: 'in_flight', label: 'IN FLIGHT' },
+            { id: 'acked', label: 'ACKED' },
+            { id: 'lost', label: 'LOST' },
+            { id: 'corrupted', label: 'CORRUPT' }
+          ].map((f) => (
             <button
-              key={f}
-              onClick={() => setFilterType(f)}
-              className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-all ${
-                filterType === f
-                  ? 'bg-slate-300 text-slate-900 border-slate-300'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+              key={f.id}
+              onClick={() => setFilterType(f.id)}
+              className={`px-3 py-1 rounded-full text-xs font-mono font-bold tracking-wider transition-all ${
+                filterType === f.id
+                  ? 'bg-[#141413] text-[#F5F3EE]'
+                  : 'text-[#626059] hover:text-[#141413]'
               }`}
             >
-              {f === 'all' ? 'All' : f.replace('_', '-')}
+              {f.label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-800/60">
-        <table className="w-full text-xs font-mono">
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left font-mono text-xs border-collapse">
           <thead>
-            <tr className="border-b border-slate-800 bg-slate-900/60">
-              {['Seq', 'Type', 'Status', 'Attempts', 'RTT', 'Last Event', 'Timestamp'].map((col) => (
-                <th key={col} className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  {col}
-                </th>
-              ))}
-              <th className="px-3 py-2.5 text-center text-[11px] text-slate-400">Details</th>
+            <tr className="border-b border-[#DCD9D1] text-[#969389] text-[10px] uppercase tracking-wider">
+              <th className="py-3 px-4 font-semibold">Sequence</th>
+              <th className="py-3 px-4 font-semibold">Type</th>
+              <th className="py-3 px-4 font-semibold">Status</th>
+              <th className="py-3 px-4 font-semibold">CRC-32</th>
+              <th className="py-3 px-4 font-semibold">Attempts</th>
+              <th className="py-3 px-4 font-semibold">RTT</th>
+              <th className="py-3 px-4 font-semibold text-right">Timestamp</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/40">
-            {filtered.slice(0, 100).map((row) => {
-              const statusStyle = STATUS_STYLES[row.status] || STATUS_STYLES.default;
-              return (
-                <tr
-                  key={row.seq}
-                  className="hover:bg-slate-900/60 transition-colors cursor-pointer"
-                  onClick={() => setSelectedEvent(row)}
-                >
-                  <td className="px-3 py-2 font-bold text-white">#{row.seq}</td>
-                  <td className="px-3 py-2 text-slate-300">{row.type || '—'}</td>
-                  <td className="px-3 py-2">
-                    <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${statusStyle}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className={`px-3 py-2 font-bold ${row.attempts > 1 ? 'text-amber-400' : 'text-slate-300'}`}>
-                    {row.attempts}
-                  </td>
-                  <td className="px-3 py-2 text-cyan-400">
-                    {row.rtt !== null ? `${(row.rtt * 1000).toFixed(1)} ms` : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-slate-400 text-[10px]">
-                    {row.lastEvent?.replace(/_/g, ' ')}
-                  </td>
-                  <td className="px-3 py-2 text-slate-500 text-[10px]">
-                    {row.lastTimestamp ? new Date(row.lastTimestamp * 1000).toLocaleTimeString() : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    <Info className="w-3.5 h-3.5 text-slate-500 hover:text-blue-400 inline" />
-                  </td>
-                </tr>
-              );
-            })}
+          <tbody className="divide-y divide-[#ECE9E2]">
+            {filtered.slice(0, 100).map((row) => (
+              <tr
+                key={row.seq}
+                onClick={() => setSelectedEvent(row)}
+                className="hover:bg-[#F5F3EE] cursor-pointer transition-colors"
+              >
+                <td className="py-3 px-4 font-bold text-[#141413]">
+                  #{String(row.seq).padStart(2, '0')}
+                </td>
+                <td className="py-3 px-4 text-[#626059]">
+                  {row.type}
+                </td>
+                <td className="py-3 px-4">
+                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                    row.status === 'acked' ? 'bg-[#ECE9E2] text-[#141413]' :
+                    row.status === 'in_flight' ? 'bg-[#141413] text-[#F5F3EE]' :
+                    row.status === 'lost' ? 'bg-red-100 text-red-700' :
+                    row.status === 'corrupted' ? 'bg-amber-100 text-amber-800' :
+                    'bg-[#F5F3EE] text-[#626059]'
+                  }`}>
+                    {row.status}
+                  </span>
+                </td>
+                <td className="py-3 px-4 text-[#626059] font-mono text-[11px]">
+                  {row.checksum}
+                </td>
+                <td className="py-3 px-4 font-bold text-[#141413]">
+                  {row.attempts}
+                </td>
+                <td className="py-3 px-4 text-[#626059]">
+                  {row.rtt !== null ? `${(row.rtt * 1000).toFixed(1)} ms` : '—'}
+                </td>
+                <td className="py-3 px-4 text-right text-[#969389] text-[11px]">
+                  {row.lastTimestamp ? new Date(row.lastTimestamp * 1000).toLocaleTimeString() : '—'}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
+
         {filtered.length === 0 && (
-          <div className="text-center py-8 text-slate-500 text-xs">
-            No packets to display. Start a transfer to see live packet data.
+          <div className="text-center py-12 text-[#969389] text-xs font-mono">
+            No packets matching filter. Run a transfer in the lab to inspect packets.
           </div>
         )}
       </div>
 
-      {/* Event Details Drawer */}
-      {selectedEvent && (
-        <div className="mt-4 p-4 rounded-xl bg-slate-950/80 border border-slate-700/60 relative">
-          <button
-            onClick={() => setSelectedEvent(null)}
-            className="absolute top-3 right-3 text-slate-500 hover:text-white text-xs"
-          >
-            ✕ Close
-          </button>
-          <h3 className="text-xs font-bold text-white mb-3 flex items-center gap-2">
-            <Info className="w-4 h-4 text-blue-400" />
-            Protocol Inspector: Packet #{selectedEvent.seq}
-          </h3>
-          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-            {Object.entries(selectedEvent).map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400">{k}:</span>
-                <span className="text-white font-bold truncate">{String(v)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

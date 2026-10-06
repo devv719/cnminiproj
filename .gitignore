@@ -44,3 +44,4 @@ Thumbs.db
 # Output transfers
 backend/output_files/
 output_files/
+received_files/

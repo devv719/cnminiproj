@@ -337,9 +337,7 @@ export default function App() {
 
         {/* 4. DOCUMENTATION VIEW */}
         {activeView === 'docs' && (
-          <div className="max-w-5xl mx-auto px-6 py-12">
-            <DocumentationView />
-          </div>
+          <DocumentationView onEnterLab={() => setActiveView('lab')} />
         )}
 
       </main>

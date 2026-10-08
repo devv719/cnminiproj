@@ -187,36 +187,39 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
 
                 {/* UNRELIABLE NETWORK CHANNEL */}
                 <div className="md:col-span-6 flex flex-col items-center justify-center px-4 relative py-6">
-                  <div className="w-full border-t-2 border-dashed border-[#DCD9D1] relative">
-                    {/* Animated moving packet */}
+                  <div className="w-full border-t-2 border-dashed border-[#DCD9D1] relative my-2">
+                    {/* Animated moving packet: Travels 0% -> 100% in first half of cycle */}
                     <motion.div 
                       animate={{ 
-                        x: ['0%', '100%'],
-                        opacity: [0, 1, 1, 0]
+                        left: ['0%', '0%', '100%', '100%', '100%', '0%'],
+                        opacity: [0, 1, 1, 0, 0, 0],
+                        scale: [0.9, 1, 1, 0.9, 0.9, 0.9]
                       }}
                       transition={{ 
-                        duration: 3, 
+                        duration: 5.4, 
                         repeat: Infinity, 
-                        ease: "easeInOut" 
+                        ease: "easeInOut",
+                        times: [0, 0.08, 0.46, 0.50, 0.98, 1]
                       }}
-                      className="absolute -top-3 w-8 h-6 bg-[#141413] text-[#F5F3EE] rounded flex items-center justify-center font-mono text-[10px] font-bold shadow-md"
+                      className="absolute -top-3.5 -translate-x-1/2 w-9 h-7 bg-[#141413] text-[#F5F3EE] rounded-md flex items-center justify-center font-mono text-[10px] font-bold shadow-md z-10"
                     >
                       PKT
                     </motion.div>
 
-                    {/* Animated moving ACK */}
+                    {/* Animated moving ACK: Starts at 100% ONLY AFTER PKT reaches receiver, travels 100% -> 0% */}
                     <motion.div 
                       animate={{ 
-                        x: ['100%', '0%'],
-                        opacity: [0, 1, 1, 0]
+                        left: ['100%', '100%', '100%', '0%', '0%', '100%'],
+                        opacity: [0, 0, 1, 1, 0, 0],
+                        scale: [0.9, 0.9, 1, 1, 0.9, 0.9]
                       }}
                       transition={{ 
-                        duration: 3, 
-                        delay: 1.5,
+                        duration: 5.4, 
                         repeat: Infinity, 
-                        ease: "easeInOut" 
+                        ease: "easeInOut",
+                        times: [0, 0.52, 0.58, 0.94, 0.98, 1]
                       }}
-                      className="absolute -bottom-3 w-8 h-6 bg-[#FFFFFF] border border-[#141413] text-[#141413] rounded flex items-center justify-center font-mono text-[10px] font-bold"
+                      className="absolute -bottom-3.5 -translate-x-1/2 w-9 h-7 bg-[#FFFFFF] border border-[#141413] text-[#141413] rounded-md flex items-center justify-center font-mono text-[10px] font-bold shadow-sm z-10"
                     >
                       ACK
                     </motion.div>

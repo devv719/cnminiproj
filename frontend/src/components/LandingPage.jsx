@@ -12,6 +12,8 @@ import {
   Clock,
   Shuffle
 } from 'lucide-react';
+import { ScrollReveal, ScrollStagger, ScrollText, ParallaxHeading } from './ScrollAnimations';
+import DotsField from './DotsField';
 
 export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs }) {
   const [activeProtoTab, setActiveProtoTab] = useState('saw');
@@ -74,6 +76,7 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
                   Computer Networks / Reliable Data Transfer
                 </span>
               </motion.div>
+
 
               <motion.h1 
                 initial={{ opacity: 0, y: 24 }}
@@ -263,33 +266,48 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             
-            <div className="lg:col-span-4">
+            <ScrollReveal className="lg:col-span-4" variant="slide-right" threshold={0.2}>
               <span className="text-xs font-mono font-semibold tracking-widest text-[#969389] uppercase block mb-4">
                 01 / Transport Philosophy
               </span>
               <p className="text-sm text-[#626059] leading-relaxed">
                 Standard UDP sends datagrams without guarantees. If a router queue overflows, datagrams vanish silently. Reliability must be engineered at the application layer.
               </p>
-            </div>
+            </ScrollReveal>
 
             <div className="lg:col-span-8 lg:pl-12">
               <div className="space-y-4">
-                <h2 className="font-editorial text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tighter text-[#141413]">
-                  UDP is fast.
-                </h2>
-                <h2 className="font-editorial text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tighter text-[#626059]">
-                  UDP is simple.
-                </h2>
-                <h2 className="font-editorial text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tighter text-[#969389]">
-                  UDP is unreliable.
-                </h2>
+                <ParallaxHeading speed={0.08}>
+                  <ScrollReveal variant="slide-up" delay={0} threshold={0.15}>
+                    <h2 className="font-editorial text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tighter text-[#141413]">
+                      UDP is fast.
+                    </h2>
+                  </ScrollReveal>
+                </ParallaxHeading>
+                <ParallaxHeading speed={0.12}>
+                  <ScrollReveal variant="slide-up" delay={80} threshold={0.15}>
+                    <h2 className="font-editorial text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tighter text-[#626059]">
+                      UDP is simple.
+                    </h2>
+                  </ScrollReveal>
+                </ParallaxHeading>
+                <ParallaxHeading speed={0.16}>
+                  <ScrollReveal variant="slide-up" delay={160} threshold={0.15}>
+                    <h2 className="font-editorial text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tighter text-[#969389]">
+                      UDP is unreliable.
+                    </h2>
+                  </ScrollReveal>
+                </ParallaxHeading>
               </div>
 
-              <div className="mt-12 pt-12 border-t border-[#DCD9D1] max-w-2xl">
+              <ScrollReveal className="mt-12 pt-12 border-t border-[#DCD9D1] max-w-2xl" variant="fade" delay={200} threshold={0.2}>
                 <p className="font-editorial text-2xl sm:text-3xl font-medium text-[#141413] leading-snug">
-                  Reliable UDP Lab adds the mechanisms needed to make data transfer reliable.
+                  <ScrollText
+                    text="Reliable UDP Lab adds the mechanisms needed to make data transfer reliable."
+                    splitBy="word"
+                  />
                 </p>
-              </div>
+              </ScrollReveal>
             </div>
 
           </div>
@@ -303,7 +321,7 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
       <section className="py-28 md:py-36 border-b border-[#DCD9D1]">
         <div className="max-w-7xl mx-auto px-6">
           
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-20">
+          <ScrollReveal className="flex flex-col md:flex-row md:items-end justify-between mb-20" variant="slide-up" threshold={0.1}>
             <div>
               <span className="text-xs font-mono font-semibold tracking-widest text-[#969389] uppercase block mb-2">
                 02 / Core Protocols
@@ -315,11 +333,12 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
             <p className="text-sm text-[#626059] mt-4 md:mt-0 max-w-xs">
               Explore how protocol complexity trades memory and logic for line throughput.
             </p>
-          </div>
+          </ScrollReveal>
 
           <div className="space-y-16">
             
             {/* Protocol 01: Stop-and-Wait */}
+            <ScrollReveal variant="slide-up" delay={0} threshold={0.1}>
             <div className="bg-[#FFFFFF] border border-[#DCD9D1] rounded-2xl p-8 md:p-14 transition-all hover:border-[#141413]">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 <div className="lg:col-span-5">
@@ -371,8 +390,10 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
                 </div>
               </div>
             </div>
+            </ScrollReveal>
 
             {/* Protocol 02: Go-Back-N */}
+            <ScrollReveal variant="slide-up" delay={0} threshold={0.1}>
             <div className="bg-[#FFFFFF] border border-[#DCD9D1] rounded-2xl p-8 md:p-14 transition-all hover:border-[#141413]">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 <div className="lg:col-span-5">
@@ -430,8 +451,10 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
                 </div>
               </div>
             </div>
+            </ScrollReveal>
 
             {/* Protocol 03: Selective Repeat */}
+            <ScrollReveal variant="slide-up" delay={0} threshold={0.1}>
             <div className="bg-[#FFFFFF] border border-[#DCD9D1] rounded-2xl p-8 md:p-14 transition-all hover:border-[#141413]">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 <div className="lg:col-span-5">
@@ -481,6 +504,7 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
                 </div>
               </div>
             </div>
+            </ScrollReveal>
 
           </div>
 
@@ -494,9 +518,9 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
       <section className="py-28 md:py-36 border-b border-[#DCD9D1] bg-[#ECE9E2]/40">
         <div className="max-w-7xl mx-auto px-6">
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start" id="network-section">
             
-            <div className="lg:col-span-6">
+            <ScrollReveal className="lg:col-span-6" variant="slide-right" threshold={0.1}>
               <span className="text-xs font-mono font-semibold tracking-widest text-[#969389] uppercase block mb-4">
                 03 / Chaos Engineering
               </span>
@@ -527,10 +551,11 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
                   </button>
                 ))}
               </div>
-            </div>
+            </ScrollReveal>
 
             {/* Visual Reveal with Framer Motion */}
-            <div className="lg:col-span-6">
+            <ScrollReveal className="lg:col-span-6" variant="slide-left" delay={100} threshold={0.1}>
+            <div>
               <motion.div 
                 key={activeFailureTab}
                 initial={{ opacity: 0, x: 20 }}
@@ -570,6 +595,7 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
                 </div>
               </motion.div>
             </div>
+            </ScrollReveal>
 
           </div>
 
@@ -578,12 +604,20 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
 
 
       {/* ============================================================ */}
+      {/* 4.5 INTERACTIVE DOTS FIELD */}
+      {/* ============================================================ */}
+      <ScrollReveal variant="fade" threshold={0.05}>
+        <DotsField />
+      </ScrollReveal>
+
+
+      {/* ============================================================ */}
       {/* 5. PRODUCT PREVIEW: Large Agency-Style Lab Showcase */}
       {/* ============================================================ */}
       <section className="py-28 md:py-36 border-b border-[#DCD9D1]">
         <div className="max-w-7xl mx-auto px-6">
           
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <ScrollReveal className="text-center max-w-3xl mx-auto mb-16" variant="slide-up" threshold={0.1}>
             <span className="text-xs font-mono font-semibold tracking-widest text-[#969389] uppercase block mb-2">
               04 / Complete Workspace
             </span>
@@ -593,7 +627,7 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
             <p className="text-base text-[#626059] mt-4">
               Real-time telemetry, live packet dissection, SHA-256 byte integrity, and automated benchmarking.
             </p>
-          </div>
+          </ScrollReveal>
 
           {/* Browser Shell Preview */}
           <div className="bg-[#FFFFFF] border border-[#DCD9D1] rounded-2xl overflow-hidden shadow-sm">
@@ -724,27 +758,33 @@ export default function LandingPage({ onEnterLab, onOpenExperiments, onOpenDocs 
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
             
-            <span className="text-xs font-mono font-semibold tracking-widest text-[#969389] uppercase block mb-6">
-              Interactive Transport Research
-            </span>
+            <ScrollReveal variant="fade" threshold={0.1}>
+              <span className="text-xs font-mono font-semibold tracking-widest text-[#969389] uppercase block mb-6">
+                Interactive Transport Research
+              </span>
+            </ScrollReveal>
 
-            <h2 className="font-editorial text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tighter leading-[1.0] mb-8">
-              Don't just learn<br />
-              how reliability works.<br />
-              <span className="text-[#969389]">See it happen.</span>
-            </h2>
+            <ScrollReveal variant="slide-up" delay={100} threshold={0.1}>
+              <h2 className="font-editorial text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tighter leading-[1.0] mb-8">
+                Don't just learn<br />
+                how reliability works.<br />
+                <span className="text-[#969389]">See it happen.</span>
+              </h2>
+            </ScrollReveal>
 
-            <p className="text-lg text-[#AAA59A] max-w-xl mx-auto mb-12">
-              Run live file transfers, inject physical network impairments, watch packet sliding windows evolve, and inspect exact byte checksums.
-            </p>
+            <ScrollReveal variant="slide-up" delay={200} threshold={0.1}>
+              <p className="text-lg text-[#AAA59A] max-w-xl mx-auto mb-12">
+                Run live file transfers, inject physical network impairments, watch packet sliding windows evolve, and inspect exact byte checksums.
+              </p>
 
-            <button
-              onClick={onEnterLab}
-              className="inline-flex items-center justify-center gap-3 bg-[#F5F3EE] text-[#141413] px-10 py-5 rounded-full font-editorial font-bold text-base tracking-wider uppercase transition-all hover:bg-[#FFFFFF] hover:scale-105 active:scale-100 shadow-xl"
-            >
-              <span>ENTER THE LAB</span>
-              <ArrowUpRight className="w-5 h-5" />
-            </button>
+              <button
+                onClick={onEnterLab}
+                className="inline-flex items-center justify-center gap-3 bg-[#F5F3EE] text-[#141413] px-10 py-5 rounded-full font-editorial font-bold text-base tracking-wider uppercase transition-all hover:bg-[#FFFFFF] hover:scale-105 active:scale-100 shadow-xl"
+              >
+                <span>ENTER THE LAB</span>
+                <ArrowUpRight className="w-5 h-5" />
+              </button>
+            </ScrollReveal>
 
           </div>
         </div>

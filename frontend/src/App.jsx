@@ -13,6 +13,7 @@ import IntegrityPanel from './components/IntegrityPanel';
 import EventLog from './components/EventLog';
 import ExperimentsPanel from './components/ExperimentsPanel';
 import DocumentationView from './components/DocumentationView';
+import CustomCursor from './components/CustomCursor';
 
 export default function App() {
   // Main view state: 'landing' | 'lab' | 'experiments' | 'docs'
@@ -185,6 +186,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F5F3EE] text-[#141413] flex flex-col font-sans">
       
+      {/* Global custom cursor */}
+      <CustomCursor />
+
       {/* Sticky Header */}
       <Header
         activeView={activeView}

@@ -237,28 +237,31 @@ class GoBackNSender(BaseSender):
         """Helper for reliable handshake (START/END) with blocking timeout."""
         attempt = 0
         sock.settimeout(0.2)
-        while not self._stop_flag.is_set():
-            attempt += 1
-            if attempt > self.max_retries + 5:
-                raise TimeoutError(f"GBN Handshake failed for {pkt.pkt_type.name}")
+        try:
+            while not self._stop_flag.is_set():
+                attempt += 1
+                if attempt > self.max_retries + 5:
+                    raise TimeoutError(f"GBN Handshake failed for {pkt.pkt_type.name}")
 
-            pkt.timestamp = time.time()
-            packed = pkt.pack()
-            sock.sendto(packed, (self.dest_host, self.dest_port))
-            self.stats.sent_attempts += 1
-            self.stats.total_bytes_sent += len(packed)
+                pkt.timestamp = time.time()
+                packed = pkt.pack()
+                sock.sendto(packed, (self.dest_host, self.dest_port))
+                self.stats.sent_attempts += 1
+                self.stats.total_bytes_sent += len(packed)
 
-            start_t = time.time()
-            while time.time() - start_t < 0.2:
-                try:
-                    ack_data, _ = sock.recvfrom(4096)
-                    ack_pkt = Packet.unpack(ack_data)
-                    if ack_pkt.pkt_type == PacketType.ACK and ack_pkt.ack == expected_ack:
-                        return
-                except (CorruptPacketError, BlockingIOError):
-                    continue
-                except (socket.timeout, ConnectionResetError, OSError):
-                    break
+                start_t = time.time()
+                while time.time() - start_t < 0.2:
+                    try:
+                        ack_data, _ = sock.recvfrom(4096)
+                        ack_pkt = Packet.unpack(ack_data)
+                        if ack_pkt.pkt_type == PacketType.ACK and ack_pkt.ack == expected_ack:
+                            return
+                    except (CorruptPacketError, BlockingIOError):
+                        continue
+                    except (socket.timeout, ConnectionResetError, OSError):
+                        break
+        finally:
+            sock.setblocking(False)
 
 
 class GoBackNReceiver(BaseReceiver):

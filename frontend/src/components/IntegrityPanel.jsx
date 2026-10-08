@@ -11,7 +11,7 @@ export default function IntegrityPanel({ stats, transferId }) {
 
   const handleDownload = () => {
     if (!transferId) return;
-    window.open(`http://localhost:8000/api/download/${transferId}`, '_blank');
+    window.open(`/api/download/${transferId}`, '_blank');
   };
 
   return (

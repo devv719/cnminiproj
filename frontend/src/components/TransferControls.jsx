@@ -14,7 +14,7 @@ const PROTOCOLS = [
   { id: 'sr', name: 'Selective Repeat', desc: 'Isolated selective recovery' },
 ];
 
-export default function TransferControls({ onStart, onStop, isRunning, activeStats, config, setConfig }) {
+export default function TransferControls({ onStart, onStop, isRunning, activeStats, config, setConfig, errorMessage }) {
   const [selectedPreset, setSelectedPreset] = useState('test_files/small.txt');
   const [customFile, setCustomFile] = useState(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -37,7 +37,7 @@ export default function TransferControls({ onStart, onStop, isRunning, activeSta
   const progress = activeStats?.progress_percentage || 0;
   const throughput = activeStats?.throughput_mbps || 0;
   const isSuccess = activeStats?.status === 'completed';
-  const isFailed = activeStats?.status === 'failed';
+  const isFailed = activeStats?.status === 'failed' || !!errorMessage;
 
   return (
     <div className="bg-[#FFFFFF] border border-[#DCD9D1] rounded-2xl p-8 shadow-sm">
@@ -217,7 +217,7 @@ export default function TransferControls({ onStart, onStop, isRunning, activeSta
                 {isRunning
                   ? `Transmitting — ${activeStats?.unique_packets_delivered || 0} of ${activeStats?.total_data_packets || '?'} packets`
                   : isSuccess ? 'Transfer Completed Successfully'
-                  : isFailed ? 'Transfer Interrupted'
+                  : isFailed ? (activeStats?.error_message || errorMessage || 'Transfer Interrupted')
                   : 'Ready to transmit'}
               </span>
             </div>
@@ -231,6 +231,13 @@ export default function TransferControls({ onStart, onStop, isRunning, activeSta
               </span>
             </div>
           </div>
+
+          {errorMessage && (
+            <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-xs font-mono text-red-700">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           {/* Minimal Progress Bar */}
           <div className="w-full h-1.5 bg-[#ECE9E2] rounded-full overflow-hidden">

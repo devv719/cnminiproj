@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sliders, Check, Zap } from 'lucide-react';
 
-const PRESETS = {
+const DEFAULT_PRESETS = {
   IDEAL:     { loss_rate: 0.0,  corruption_rate: 0.0,  delay_ms: 0.0,   jitter_ms: 0.0,  duplicate_rate: 0.0,  reorder_rate: 0.0 },
-  LAN:       { loss_rate: 0.0,  corruption_rate: 0.0,  delay_ms: 2.0,   jitter_ms: 0.5,  duplicate_rate: 0.0,  reorder_rate: 0.0 },
-  'WI-FI':   { loss_rate: 0.02, corruption_rate: 0.01, delay_ms: 18.0,  jitter_ms: 5.0,  duplicate_rate: 0.01, reorder_rate: 0.01 },
-  POOR:      { loss_rate: 0.12, corruption_rate: 0.04, delay_ms: 120.0, jitter_ms: 35.0, duplicate_rate: 0.03, reorder_rate: 0.05 },
-  SATELLITE: { loss_rate: 0.04, corruption_rate: 0.01, delay_ms: 450.0, jitter_ms: 50.0, duplicate_rate: 0.0,  reorder_rate: 0.0 },
+  LAN:       { loss_rate: 0.0,  corruption_rate: 0.0,  delay_ms: 1.0,   jitter_ms: 0.5,  duplicate_rate: 0.0,  reorder_rate: 0.0 },
+  'WI-FI':   { loss_rate: 0.02, corruption_rate: 0.01, delay_ms: 15.0,  jitter_ms: 5.0,  duplicate_rate: 0.01, reorder_rate: 0.01 },
+  POOR:      { loss_rate: 0.15, corruption_rate: 0.05, delay_ms: 120.0, jitter_ms: 40.0, duplicate_rate: 0.03, reorder_rate: 0.05 },
+  SATELLITE: { loss_rate: 0.03, corruption_rate: 0.01, delay_ms: 600.0, jitter_ms: 50.0, duplicate_rate: 0.0,  reorder_rate: 0.0 },
 };
 
 const SLIDERS = [
@@ -20,8 +20,28 @@ const SLIDERS = [
 ];
 
 export default function NetworkSimulator({ simulatorConfig, onConfigChange }) {
-  const [activePreset, setActivePreset] = useState('LAN');
+  const [activePreset, setActivePreset] = useState('WI-FI');
+  const [presets, setPresets] = useState(DEFAULT_PRESETS);
   const isCustom = activePreset === 'CUSTOM';
+
+  useEffect(() => {
+    fetch('/api/profiles')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setPresets((prev) => ({
+            ...prev,
+            LAN: data.LAN || prev.LAN,
+            'WI-FI': data.WIFI || data['WI-FI'] || prev['WI-FI'],
+            POOR: data.POOR || prev.POOR,
+            SATELLITE: data.SATELLITE || prev.SATELLITE,
+          }));
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load profiles from backend, using defaults:', err);
+      });
+  }, []);
 
   const updateField = (field, val) => {
     setActivePreset('CUSTOM');
@@ -30,8 +50,8 @@ export default function NetworkSimulator({ simulatorConfig, onConfigChange }) {
 
   const applyPreset = (name) => {
     setActivePreset(name);
-    if (name !== 'CUSTOM' && PRESETS[name]) {
-      onConfigChange(PRESETS[name]);
+    if (name !== 'CUSTOM' && presets[name]) {
+      onConfigChange(presets[name]);
     }
   };
 

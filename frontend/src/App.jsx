@@ -40,26 +40,27 @@ export default function App() {
     maxRetries: '10',
   });
 
-  // Network condition simulation config
+  // Network condition simulation config (defaults to WI-FI matching backend WIFI preset)
   const [simulatorConfig, setSimulatorConfig] = useState({
-    loss_rate: 0.0,
-    corruption_rate: 0.0,
-    delay_ms: 2.0,
-    jitter_ms: 0.5,
-    duplicate_rate: 0.0,
-    reorder_rate: 0.0,
+    loss_rate: 0.02,
+    corruption_rate: 0.01,
+    delay_ms: 15.0,
+    jitter_ms: 5.0,
+    duplicate_rate: 0.01,
+    reorder_rate: 0.01,
   });
 
   // Transfer state
   const [activeTransferId, setActiveTransferId] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [activeStats, setActiveStats] = useState(null);
+  const [transferError, setTransferError] = useState(null);
 
   // Update backend network simulation params
   const handleConfigChange = useCallback(async (newConfig) => {
     setSimulatorConfig(newConfig);
     try {
-      await fetch('/api/network/simulate', {
+      await fetch('/api/simulator/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newConfig),
@@ -71,84 +72,112 @@ export default function App() {
 
   // Start file transfer
   const handleStartTransfer = useCallback(async (params) => {
+    setTransferError(null);
     clearEvents();
-    setIsRunning(true);
-    setActiveStats(null);
 
     try {
-      let res;
+      const formData = new FormData();
       if (params.customFile) {
-        const formData = new FormData();
         formData.append('file', params.customFile);
-        formData.append('protocol', params.protocol);
-        formData.append('packet_size', params.packetSize);
-        formData.append('timeout', params.timeout);
-        formData.append('adaptive_timeout', params.adaptiveTimeout);
-        formData.append('window_size', params.windowSize);
-        formData.append('max_retries', params.maxRetries);
+      }
 
-        res = await fetch('/api/transfer/start', {
-          method: 'POST',
-          body: formData,
-        });
-      } else {
-        res = await fetch('/api/transfer/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            server_file_path: params.serverFilePath,
-            protocol: params.protocol,
-            packet_size: params.packetSize,
-            timeout: params.timeout,
-            adaptive_timeout: params.adaptiveTimeout,
-            window_size: params.windowSize,
-            max_retries: params.maxRetries,
-          }),
-        });
+      const configPayload = {
+        server_file_path: params.customFile ? null : params.serverFilePath,
+        protocol: params.protocol,
+        packet_size: params.packetSize,
+        timeout: params.timeout,
+        adaptive_timeout: params.adaptiveTimeout,
+        window_size: params.windowSize,
+        max_retries: params.maxRetries,
+        simulator: simulatorConfig,
+      };
+
+      formData.append('config_json', JSON.stringify(configPayload));
+
+      const res = await fetch('/api/transfer/start', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const msg = errData.detail || `Server error (${res.status})`;
+        throw new Error(msg);
       }
 
       const data = await res.json();
       if (data.transfer_id) {
         setActiveTransferId(data.transfer_id);
       }
+      setIsRunning(true);
     } catch (err) {
       console.error('Failed to start transfer:', err);
       setIsRunning(false);
+      setTransferError(err.message || 'Failed to start transfer');
     }
-  }, [clearEvents]);
+  }, [clearEvents, simulatorConfig]);
 
   // Stop file transfer
   const handleStopTransfer = useCallback(async () => {
     try {
-      await fetch('/api/transfer/stop', { method: 'POST' });
+      const res = await fetch('/api/transfer/stop', { method: 'POST' });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to stop transfer');
+      }
       setIsRunning(false);
     } catch (e) {
       console.error('Failed to stop transfer:', e);
+      setTransferError(e.message || 'Failed to stop transfer');
     }
   }, []);
 
-  // Update active transfer stats from snapshot or latest event
+  // Update active transfer stats from snapshot
   React.useEffect(() => {
     if (statusSnapshot) {
       if (statusSnapshot.is_running !== undefined) {
         setIsRunning(statusSnapshot.is_running);
       }
       if (statusSnapshot.stats) {
-        setActiveStats(statusSnapshot.stats);
+        setActiveStats((prev) => ({ ...(prev || {}), ...statusSnapshot.stats }));
       }
-      if (statusSnapshot.transfer_id) {
-        setActiveTransferId(statusSnapshot.transfer_id);
+      if (statusSnapshot.active_transfer_id || statusSnapshot.transfer_id) {
+        setActiveTransferId(statusSnapshot.active_transfer_id || statusSnapshot.transfer_id);
       }
     }
   }, [statusSnapshot]);
 
-  // Handle transfer completed/failed from event stream
+  // Handle transfer events from WebSocket stream
   React.useEffect(() => {
     if (latestEvent) {
-      if (latestEvent.event_type === 'transfer_complete') {
+      if (latestEvent.event_type === 'transfer_started') {
+        setIsRunning(true);
+        setTransferError(null);
+        setActiveStats((prev) => ({
+          ...(prev || {}),
+          status: 'running',
+          file_name: latestEvent.details?.filename || prev?.file_name,
+          file_size_bytes: latestEvent.details?.file_size || prev?.file_size_bytes,
+          total_data_packets: latestEvent.details?.total_packets ?? prev?.total_data_packets,
+          original_sha256: latestEvent.details?.sha256_hash || prev?.original_sha256,
+          unique_packets_delivered: 0,
+          progress_percentage: 0,
+        }));
+      } else if (latestEvent.event_type === 'transfer_progress') {
+        setActiveStats((prev) => ({
+          ...(prev || {}),
+          progress_percentage: latestEvent.details?.progress ?? prev?.progress_percentage,
+          unique_packets_delivered: latestEvent.seq !== undefined && latestEvent.seq !== null ? latestEvent.seq + 1 : prev?.unique_packets_delivered,
+        }));
+      } else if (latestEvent.event_type === 'transfer_complete') {
         setIsRunning(false);
+        if (latestEvent.details) {
+          setActiveStats((prev) => ({ ...(prev || {}), ...latestEvent.details, status: 'completed' }));
+        }
       } else if (latestEvent.event_type === 'transfer_failed') {
         setIsRunning(false);
+        setTransferError(latestEvent.message || 'Transfer failed');
+        setActiveStats((prev) => ({ ...(prev || {}), status: 'failed', error_message: latestEvent.message }));
       }
     }
   }, [latestEvent]);
@@ -227,6 +256,7 @@ export default function App() {
                       activeStats={activeStats}
                       config={transferConfig}
                       setConfig={setTransferConfig}
+                      errorMessage={transferError}
                     />
                   </div>
                   <div className="lg:col-span-5">

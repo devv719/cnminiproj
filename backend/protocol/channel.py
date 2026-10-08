@@ -15,6 +15,7 @@ from typing import Optional, Tuple, Dict, Any, List
 from protocol.checksum import corrupt_bytes
 from protocol.events import EventBus, Event, EventType
 from protocol.packet import Packet, PacketType
+from protocol.base import _apply_udp_connreset
 
 
 @dataclass
@@ -92,13 +93,9 @@ class NetworkChannel:
         """Starts the proxy loop in a background thread."""
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        if hasattr(socket, "SIO_UDP_CONNRESET"):
-            try:
-                self.sock.ioctl(socket.SIO_UDP_CONNRESET, False)
-            except Exception:
-                pass
+        _apply_udp_connreset(self.sock)
         self.sock.bind((self.listen_host, self.listen_port))
-        self.sock.settimeout(0.05)
+        self.sock.settimeout(0.005)
 
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._proxy_loop, daemon=True)
@@ -145,11 +142,8 @@ class NetworkChannel:
             except (socket.timeout, OSError):
                 continue
 
-            # Determine routing direction
-            is_from_receiver = (
-                addr[0] in ("127.0.0.1", "localhost", self.dest_host)
-                and addr[1] == self.dest_port
-            )
+            # Determine routing direction: if source port matches receiver's listen port, it's reverse
+            is_from_receiver = (addr[1] == self.dest_port)
 
             if is_from_receiver:
                 direction = "reverse"

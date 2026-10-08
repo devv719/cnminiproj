@@ -122,14 +122,45 @@ class TransferStats:
         })
 
     def to_dict(self) -> Dict[str, Any]:
-        d = asdict(self)
-        d["duration_seconds"] = round(self.duration_seconds, 3)
-        d["throughput_mbps"] = round(self.throughput_mbps, 3)
-        d["protocol_efficiency"] = round(self.protocol_efficiency, 4)
-        d["theoretical_saw_efficiency"] = round(self.theoretical_saw_efficiency, 4)
-        d["packet_loss_rate"] = round(self.packet_loss_rate, 4)
-        d["progress_percentage"] = round(self.progress_percentage, 1)
-        return d
+        time_series_copy = list(self.time_series)
+        return {
+            "protocol": self.protocol,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "file_name": self.file_name,
+            "file_size_bytes": self.file_size_bytes,
+            "packet_size_bytes": self.packet_size_bytes,
+            "total_data_packets": self.total_data_packets,
+            "unique_packets_delivered": self.unique_packets_delivered,
+            "sent_attempts": self.sent_attempts,
+            "retransmissions": self.retransmissions,
+            "packets_lost": self.packets_lost,
+            "corrupted_detected": self.corrupted_detected,
+            "duplicates_detected": self.duplicates_detected,
+            "out_of_order_buffered": self.out_of_order_buffered,
+            "acks_sent": self.acks_sent,
+            "acks_received": self.acks_received,
+            "acks_lost": self.acks_lost,
+            "timeouts": self.timeouts,
+            "useful_bytes_sent": self.useful_bytes_sent,
+            "total_bytes_sent": self.total_bytes_sent,
+            "min_rtt_ms": self.min_rtt_ms,
+            "avg_rtt_ms": self.avg_rtt_ms,
+            "max_rtt_ms": self.max_rtt_ms,
+            "current_timeout_ms": self.current_timeout_ms,
+            "original_sha256": self.original_sha256,
+            "reconstructed_sha256": self.reconstructed_sha256,
+            "verified": self.verified,
+            "status": self.status,
+            "error_message": self.error_message,
+            "time_series": time_series_copy,
+            "duration_seconds": round(self.duration_seconds, 3),
+            "throughput_mbps": round(self.throughput_mbps, 3),
+            "protocol_efficiency": round(self.protocol_efficiency, 4),
+            "theoretical_saw_efficiency": round(self.theoretical_saw_efficiency, 4),
+            "packet_loss_rate": round(self.packet_loss_rate, 4),
+            "progress_percentage": round(self.progress_percentage, 1),
+        }
 
     def to_csv(self) -> str:
         output = io.StringIO()

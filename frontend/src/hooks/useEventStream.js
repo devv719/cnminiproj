@@ -15,8 +15,9 @@ export function useEventStream() {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
-    // Connect to port 8000 in dev or current port if proxied
-    const wsUrl = `${protocol}//${host}:8000/ws/events`;
+    const apiPort = import.meta.env.VITE_API_PORT || '8000';
+    // Connect to port in dev or proxy
+    const wsUrl = `${protocol}//${host}:${apiPort}/ws/events`;
 
     try {
       const ws = new WebSocket(wsUrl);

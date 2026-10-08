@@ -58,9 +58,9 @@ The system strictly decouples the **UDP data path** from the **WebSocket monitor
 
 ## 📦 Protocol Specification
 
-### Packet Header Layout (23 Bytes Packed Binary)
+### Packet Header Layout (20 Bytes Packed Binary)
 
-All packets transmitted over the UDP socket share a fixed 23-byte binary header formatted using Python's `struct` format `!B I I I H B I`:
+All packets transmitted over the UDP socket share a fixed 20-byte binary header formatted using Python's `struct` format `!B I I I H B I`:
 
 ```
  0                   1                   2                   3

@@ -41,6 +41,37 @@ transfer_manager = TransferManager(event_bus=global_event_bus)
 experiment_runner = ExperimentRunner()
 
 
+# Ensure test files exist
+from create_test_files import create_test_files
+try:
+    create_test_files("test_files")
+    create_test_files(os.path.join(os.path.dirname(__file__), "test_files"))
+    create_test_files(os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_files"))
+except Exception:
+    pass
+
+
+def resolve_file_path(path_str: Optional[str]) -> Optional[str]:
+    if not path_str:
+        return None
+    if os.path.isabs(path_str) and os.path.isfile(path_str):
+        return path_str
+    
+    candidates = [
+        path_str,
+        os.path.join(os.getcwd(), path_str),
+        os.path.join(os.path.dirname(__file__), path_str),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), path_str),
+        os.path.join(os.getcwd(), "test_files", os.path.basename(path_str)),
+        os.path.join(os.path.dirname(__file__), "test_files", os.path.basename(path_str)),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_files", os.path.basename(path_str)),
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return os.path.abspath(c)
+    return None
+
+
 # --- Pydantic Request Models ---
 
 class SimulatorConfigRequest(BaseModel):
@@ -102,16 +133,17 @@ async def start_transfer(
         file_bytes = await file.read()
         filename = file.filename or "uploaded_file.bin"
     elif req.server_file_path:
-        if not os.path.isfile(req.server_file_path):
+        resolved_path = resolve_file_path(req.server_file_path)
+        if not resolved_path:
             raise HTTPException(status_code=404, detail=f"File not found: {req.server_file_path}")
-        with open(req.server_file_path, "rb") as f:
+        with open(resolved_path, "rb") as f:
             file_bytes = f.read()
-        filename = os.path.basename(req.server_file_path)
+        filename = os.path.basename(resolved_path)
     else:
         # Default fallback to sample test file
-        default_file = os.path.join("test_files", "small.txt")
-        if os.path.isfile(default_file):
-            with open(default_file, "rb") as f:
+        resolved_default = resolve_file_path("test_files/small.txt")
+        if resolved_default:
+            with open(resolved_default, "rb") as f:
                 file_bytes = f.read()
             filename = "small.txt"
         else:
@@ -162,6 +194,13 @@ def get_transfer_result(transfer_id: Optional[str] = Query(None)):
     if not res:
         raise HTTPException(status_code=404, detail="No result found")
     return res
+
+
+@app.get("/api/simulator/config")
+def get_simulator_config():
+    if transfer_manager.active_channel:
+        return transfer_manager.active_channel.config.to_dict()
+    return PRESETS.get("LAN", ChannelConfig()).to_dict()
 
 
 @app.post("/api/simulator/config")
@@ -301,7 +340,7 @@ async def websocket_events_endpoint(websocket: WebSocket):
                     "kind": "snapshot",
                     "payload": status,
                 })
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, Exception):
         pass
     finally:
         unsubscribe()

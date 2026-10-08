@@ -30,17 +30,20 @@ class TransferManager:
         self.received_file_bytes: Optional[bytes] = None
 
         self._transfer_thread: Optional[threading.Thread] = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._history: Dict[str, Dict[str, Any]] = {}
+
+    def _is_running_unlocked(self) -> bool:
+        return (
+            self._transfer_thread is not None
+            and self._transfer_thread.is_alive()
+            and self.active_stats is not None
+            and self.active_stats.status == "running"
+        )
 
     def is_running(self) -> bool:
         with self._lock:
-            return (
-                self._transfer_thread is not None
-                and self._transfer_thread.is_alive()
-                and self.active_stats is not None
-                and self.active_stats.status == "running"
-            )
+            return self._is_running_unlocked()
 
     def start_transfer(
         self,
@@ -55,7 +58,7 @@ class TransferManager:
         simulator_config: Optional[ChannelConfig] = None,
     ) -> str:
         with self._lock:
-            if self.is_running():
+            if self._is_running_unlocked():
                 raise RuntimeError("A transfer is already running. Please stop it first.")
 
             transfer_id = str(uuid.uuid4())[:8]
@@ -129,6 +132,9 @@ class TransferManager:
                 raise ValueError(f"Unsupported protocol: {protocol}")
 
             self.active_stats = self.active_sender.stats
+            self.active_stats.status = "running"
+            self.active_stats.file_name = filename
+            self.active_stats.file_size_bytes = len(file_bytes)
             self.active_config = {
                 "transfer_id": transfer_id,
                 "protocol": protocol,
@@ -181,12 +187,25 @@ class TransferManager:
                 self.active_stats.duplicates_detected = receiver_stats.duplicates_detected
                 self.active_stats.corrupted_detected = receiver_stats.corrupted_detected
                 self.active_stats.out_of_order_buffered = receiver_stats.out_of_order_buffered
+                self.event_bus.emit(
+                    Event(
+                        event_type=EventType.TRANSFER_COMPLETE,
+                        message=f"Transfer completed and verified: {self.active_stats.verified}",
+                        details=self.active_stats.to_dict(),
+                    )
+                )
 
         except Exception as e:
             if self.active_stats:
                 self.active_stats.status = "failed"
                 self.active_stats.error_message = str(e)
+            if self.active_receiver:
+                self.active_receiver.stop()
+            if self.active_sender:
+                self.active_sender.stop()
         finally:
+            if self.active_receiver:
+                self.active_receiver.stop()
             if self.active_channel:
                 self.active_channel.stop()
             with self._lock:
@@ -198,7 +217,7 @@ class TransferManager:
 
     def stop_transfer(self) -> bool:
         with self._lock:
-            if not self.is_running():
+            if not self._is_running_unlocked():
                 return False
             if self.active_sender:
                 self.active_sender.stop()
@@ -219,11 +238,11 @@ class TransferManager:
     def get_status(self) -> Dict[str, Any]:
         with self._lock:
             if not self.active_stats:
-                return {"status": "idle", "active_transfer_id": None}
+                return {"status": "idle", "active_transfer_id": None, "is_running": False}
             return {
                 "active_transfer_id": self.active_transfer_id,
-                "is_running": self.is_running(),
-                "config": self.active_config,
+                "is_running": self._is_running_unlocked(),
+                "config": dict(self.active_config),
                 "stats": self.active_stats.to_dict(),
             }
 

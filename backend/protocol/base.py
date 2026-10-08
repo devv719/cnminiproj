@@ -28,6 +28,34 @@ def compute_file_sha256(filepath_or_bytes: bytes | str) -> str:
     return hasher.hexdigest()
 
 
+def _apply_udp_connreset(sock: socket.socket) -> None:
+    """Disables WSAECONNRESET on Windows UDP sockets so ICMP Unreachable is treated as a drop."""
+    if hasattr(socket, "SIO_UDP_CONNRESET"):
+        try:
+            sock.ioctl(socket.SIO_UDP_CONNRESET, False)
+            return
+        except Exception:
+            pass
+    if os.name == "nt":
+        try:
+            import ctypes
+            in_val = ctypes.c_ulong(0)
+            cb = ctypes.c_ulong(0)
+            ctypes.windll.ws2_32.WSAIoctl(
+                sock.fileno(),
+                0x9800000C,  # SIO_UDP_CONNRESET
+                ctypes.byref(in_val),
+                ctypes.sizeof(in_val),
+                None,
+                0,
+                ctypes.byref(cb),
+                None,
+                None,
+            )
+        except Exception:
+            pass
+
+
 class BaseSender(ABC):
     def __init__(
         self,
@@ -69,12 +97,7 @@ class BaseSender(ABC):
     def _setup_socket(self) -> socket.socket:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # On Windows, ignore ICMP port unreachable so it behaves like real UDP drop
-        if hasattr(socket, "SIO_UDP_CONNRESET"):
-            try:
-                sock.ioctl(socket.SIO_UDP_CONNRESET, False)
-            except Exception:
-                pass
+        _apply_udp_connreset(sock)
         sock.bind(("0.0.0.0", self.bind_port))
         sock.settimeout(self.timeout)
         self.sock = sock
@@ -150,11 +173,7 @@ class BaseReceiver(ABC):
     def _setup_socket(self) -> socket.socket:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        if hasattr(socket, "SIO_UDP_CONNRESET"):
-            try:
-                sock.ioctl(socket.SIO_UDP_CONNRESET, False)
-            except Exception:
-                pass
+        _apply_udp_connreset(sock)
         sock.bind((self.listen_host, self.listen_port))
         sock.settimeout(2.0)  # Periodic timeout to check _stop_flag
         self.sock = sock
